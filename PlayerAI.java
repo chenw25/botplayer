@@ -11,6 +11,7 @@ public class PlayerAI extends ClientAI {
 	public Move getMove(Gameboard gameboard, Opponent opponent, Player player) throws NoItemException, MapOutOfBoundsException {
 
 		getClosestPowerUpPath(gameboard,player,gameboard.getPowerUps());
+		getClosestTurretPath(gameboard,player,gameboard.getTurrets());
 		//Write your AI here
 		return Move.NONE;
 	}
@@ -26,23 +27,9 @@ public class PlayerAI extends ClientAI {
 		
 		for (int i = 0; i <shifts.length;i++){
 			shifts[i] = getShift(player, new Coordinate (powerUps.get(i).x,powerUps.get(i).y),gameboard.getWidth(),gameboard.getHeight());
+			System.out.println("list of nearby powerups(x,y), +means right and down,(change direction turn included)");
 			System.out.println(shifts[i].x + "       "+shifts[i].y);
 		}
-	}
-	
-	private boolean isSafe(Gameboard gameboard, Coordinate destination){
-		int maxWidth = gameboard.getWidth();
-		int maxHeight = gameboard.getHeight();
-		ArrayList<Turret> turrets = gameboard.getTurrets();
-		ArrayList<Bullet> bullets = gameboard.getBullets();
-		
-		ArrayList<Coordinate> markedCoordinate = new ArrayList<Coordinate>();
-		for (Turret turret : turrets){
-			if (isWithinBoundary(gameboard,destination,new Coordinate(turret.x,turret.y))){
-				
-			}
-		}
-		return false;
 	}
 	
 	private boolean isWithinBoundary(Gameboard gameboard,Coordinate player, Coordinate point)
@@ -119,8 +106,51 @@ public class PlayerAI extends ClientAI {
 		}else if (shiftY<0 && player.direction != Direction.UP){
 			shiftY--;
 		}
-		return new Coordinate(shiftX,shiftY);
+		return new Coordinate(shiftX,shiftY);	
+	}
+
+	/* Steve's part*/
+	private void getClosestTurretPath(Gameboard gameboard,Player player, ArrayList<Turret> tlst){
+		// if there are no power ups
+		if (tlst.size()<=0){
+			return;
+		}
+		Coordinate[] tcod = new Coordinate[tlst.size()];
 		
+		for (int i = 0; i <tcod.length;i++){
+			tcod[i] = getShift(player, new Coordinate (tlst.get(i).x,tlst.get(i).y),gameboard.getWidth(),gameboard.getHeight());
+			System.out.println("list of nearby turrets(x,y), +means right and down");
+			System.out.println(tcod[i].x + "    "+tcod[i].y);
+		}
+	}
+
+	private boolean isSafe(Gameboard gameboard, Coordinate destination) throws MapOutOfBoundsException{
+		// care about as well wrap around 
+		int w = gameboard.getWidth();
+		int h = gameboard.getHeight();
+		System.out.print("game board is "+w+" by "+h +": ");
+		if (gameboard.isWallAtTile(destination.x,destination.y)){
+			return false;
+		}
+		ArrayList<Turret> tlst = gameboard.getTurrets();
+		//empty turrets
+		if(tlst.size() <= 0 ){
+			System.out.println("there is no turret exist");
+		}
+		else{
+			System.out.print(tlst.get(0).x+","+tlst.get(0).y);
+			//checkTurrets(tlst,w,h,target);
+		}
+		return false;
+	}
+
+	private int destroyWithSheild(Coordinate player, Opponent op, ArrayList<Turret> list){
+		// player carry shield powerup and ready to destroy turret and opponent
+		// return number of turns needed to destroy closest turret
+		// given player coordinate, opponent and 
+		int turns = 0;
+		
+		return turns;
 	}
 }
 
