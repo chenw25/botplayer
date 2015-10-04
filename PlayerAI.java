@@ -10,26 +10,173 @@ public class PlayerAI extends ClientAI {
 	@Override
 	public Move getMove(Gameboard gameboard, Opponent opponent, Player player) throws NoItemException, MapOutOfBoundsException {
 
-		getClosestPowerUpPath(gameboard,player,gameboard.getPowerUps());
-		getClosestTurretPath(gameboard,player,gameboard.getTurrets());
+		//wallratio(gameboard.getHeight(),gameboard.getWalls().size(),gameboard.getTurrets().size());
+		
+		//getClosestPowerUpPath(gameboard,player,gameboard.getPowerUps());
+		//getClosestTurretPath(gameboard,player,gameboard.getTurrets());
+		if (timetouseRecursion(new Coordinate(player.x,player.y),new Coordinate(opponent.x,opponent.y),gameboard)){
+			System.out.println("Time to use recursion");
+			wallratio(gameboard);
+			return Move.NONE;
+		}
+		else{
+			System.out.println("You are free to go");
+			return getClosestPowerUpPath(gameboard,player,gameboard.getPowerUps());
+		}
 		//Write your AI here
-		return Move.NONE;
+		
 	}
 	
+	private boolean timetouseRecursion(Coordinate player,Coordinate opponent, Gameboard gameboard)throws MapOutOfBoundsException{
+		int wallcount = 0;
+		int maxh = gameboard.getHeight();
+		int maxw = gameboard.getWidth();
+		Coordinate []around = new Coordinate[4];
+		around[0]  = new Coordinate(player.x,getRealCoordinate(maxh,player.y-1));
+		around[1]  = new Coordinate(player.x,getRealCoordinate(maxh,player.y+1));
+		around[2]  = new Coordinate(getRealCoordinate(maxw,player.x-1),player.y);
+		around[3]  = new Coordinate(getRealCoordinate(maxw,player.x+1),player.y);
+		for (int i = 0; i<around.length; i++){
+			if (gameboard.isWallAtTile(around[i].x, around[i].y)){
+				wallcount ++;
+				System.out.println(around[i].x+":"+around[i].y);
+			}
+			if (opponent.x == around[i].x && opponent.y == around[i].y){
+				wallcount ++;
+				System.out.print("Run into opponent");
+			}
+		}
+		if (wallcount >= 2){
+		return true;
+		}
+		return false;
+		
+	}
+	
+	private boolean checkOnTurn(Gameboard gameboard, Coordinate player, Direction expected, int maxh, int maxw)throws MapOutOfBoundsException{
+		//TODO: check opponent and turrets as well
+		if (expected == Direction.RIGHT){
+			if (gameboard.isWallAtTile(getRealCoordinate(maxw,player.x+1), player.y)){
+				return true;
+			}
+		}
+		else if (expected == Direction.LEFT){
+			if (gameboard.isWallAtTile(getRealCoordinate(maxw,player.x-1), player.y)){
+				return true;
+			}
+		}
+		else if (expected == Direction.DOWN){
+			if (gameboard.isWallAtTile(player.x,getRealCoordinate(maxh,player.y+1))){
+				return true;
+			}
+		}
+		else if (expected == Direction.UP){
+			if (gameboard.isWallAtTile(player.x,getRealCoordinate(maxh,player.y-1))){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void wallratio (Gameboard gameboard){
+		int wc = gameboard.getWalls().size();
+		int tc = gameboard.getTurrets().size();
+		int h = gameboard.getHeight();
+		int w = gameboard.getWidth();
+		System.out.println("walls:"+wc);
+		System.out.println("turret:"+tc);
+		System.out.println("hight"+h);
+		System.out.println("width:"+w);
+		System.out.print("ratio: "+(double)(wc+tc)/(double)(h*w));
+		// give the ratio for (wall+turret/total cells)
+	}
 	//least number of turn to get to power up, straight line is always preferred
-	private void getClosestPowerUpPath(Gameboard gameboard,Player player, ArrayList<PowerUp> powerUps){
+	private Move getClosestPowerUpPath(Gameboard gameboard,Player player, ArrayList<PowerUp> powerUps) throws MapOutOfBoundsException{
 		// if there are no power ups
 		if (powerUps.size()<=0){
-			return;
+			return Move.NONE;
 		}
 		
 		Coordinate[] shifts = new Coordinate[powerUps.size()];
+		int shiftsummin = 10000;
+		int minindex = -1;
 		
 		for (int i = 0; i <shifts.length;i++){
 			shifts[i] = getShift(player, new Coordinate (powerUps.get(i).x,powerUps.get(i).y),gameboard.getWidth(),gameboard.getHeight());
 			System.out.println("list of nearby powerups(x,y), +means right and down,(change direction turn included)");
+			if (Math.abs(shifts[i].x)+Math.abs(shifts[i].y) < shiftsummin)
+			{
+				shiftsummin = Math.abs(shifts[i].x)+Math.abs(shifts[i].y);
+				minindex = i;
+			}
 			System.out.println(shifts[i].x + "       "+shifts[i].y);
 		}
+		if ( shifts[minindex].x > 0 ){
+			if(player.getDirection() != Direction.RIGHT){
+				// on turnning, check wall ahead!
+				if (checkOnTurn(gameboard,new Coordinate(player.x,player.y),Direction.RIGHT,gameboard.getHeight(),gameboard.getWidth())){
+					return Move.FORWARD;
+				}
+				else{
+					shifts[minindex].x -= 1;
+					return Move.FACE_RIGHT;
+				}
+			}
+			else{
+				shifts[minindex].x --;
+				return Move.FORWARD;				
+			}
+		}
+		else if ( shifts[minindex].x < 0 ){
+			if(player.getDirection() != Direction.LEFT){ 
+				// on turnning, check wall ahead!
+				if (checkOnTurn(gameboard,new Coordinate(player.x,player.y),Direction.LEFT,gameboard.getHeight(),gameboard.getWidth())){
+					return Move.FORWARD;
+				}
+				else{
+					shifts[minindex].x += 1;
+					return Move.FACE_LEFT;
+				}
+			}
+			else{
+				shifts[minindex].x ++;
+				return Move.FORWARD;				
+			}
+		}
+		if ( shifts[minindex].y > 0 ){
+			if(player.getDirection() != Direction.DOWN){
+				// on turning, check wall ahead!
+				if (checkOnTurn(gameboard,new Coordinate(player.x,player.y),Direction.DOWN,gameboard.getHeight(),gameboard.getWidth())){
+					return Move.FORWARD;
+				}
+				else{
+					shifts[minindex].y -= 1;
+					return Move.FACE_DOWN;
+				}
+			}
+			else{
+				shifts[minindex].y --;
+				return Move.FORWARD;				
+			}
+		}
+		else if ( shifts[minindex].y < 0 ){
+			if(player.getDirection() != Direction.UP){
+				// on turning, check wall ahead!
+				if (checkOnTurn(gameboard,new Coordinate(player.x,player.y),Direction.UP,gameboard.getHeight(),gameboard.getWidth())){
+					return Move.FORWARD;
+				}
+				else{
+					shifts[minindex].y += 1;
+					return Move.FACE_UP;
+				}
+			}
+			else{
+				shifts[minindex].y ++;
+				return Move.FORWARD;				
+			}
+		}
+		
+		return Move.NONE;
 	}
 	
 	private boolean isWithinBoundary(Gameboard gameboard,Coordinate player, Coordinate point)
@@ -162,3 +309,4 @@ class Coordinate {
 	int x;
 	int y;
 }
+
